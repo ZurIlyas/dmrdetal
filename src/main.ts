@@ -1,6 +1,6 @@
 import './style.css'
 import { initLine, STATIONS, type StationId } from './line'
-import { initExploded } from './part'
+import { initEngine } from './engine'
 
 const $ = <T extends Element = HTMLElement>(s: string, r: ParentNode = document) => r.querySelector<T>(s)!
 const $$ = <T extends Element = HTMLElement>(s: string, r: ParentNode = document) => Array.from(r.querySelectorAll<T>(s))
@@ -51,9 +51,9 @@ $$('[data-st]').forEach((li) => li.addEventListener('click', () => {
 
 // ---------- генератор в разборе ----------
 const ex = $('[data-explode]')
-const exploded = initExploded($('.explode-pin', ex))
+const exploded = initEngine($('.explode-pin', ex))
 const bar = $('[data-explode-bar]')
-const forcedP = Number(new URLSearchParams(location.search).get('p')) || 0   // ?p=0.8 — посмотреть генератор в разборе без прокрутки
+const forcedP = Number(new URLSearchParams(location.search).get('p')) || 0   // ?p=0.8 — посмотреть мотор в разборе без прокрутки
 
 // ---------- прокрутка ----------
 const top = $('.top')
@@ -61,7 +61,7 @@ function onScroll() {
   top.classList.toggle('solid', scrollY > 40)
   const r = ex.getBoundingClientRect()
   const p = forcedP || Math.max(0, Math.min(1, -r.top / (r.height - innerHeight)))
-  exploded?.setProgress(p)
+  exploded?.setProgress(p, !!forcedP)
   bar.style.width = p * 100 + '%'
   lightWords()
 }
