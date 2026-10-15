@@ -29,7 +29,8 @@ export function initLine(root: HTMLElement, opts: { onReady?: () => void; onStat
   } catch {
     return null
   }
-  const W = () => root.clientWidth, H = () => root.clientHeight
+  // размер берём у холста: на телефоне он ниже текста и меньше всего первого экрана
+  const W = () => canvas.clientWidth, H = () => canvas.clientHeight
   renderer.setPixelRatio(Math.min(devicePixelRatio, W() < 900 ? 1.5 : 1.75))
   renderer.outputColorSpace = THREE.SRGBColorSpace
   renderer.toneMapping = THREE.ACESFilmicToneMapping
@@ -340,6 +341,8 @@ export function initLine(root: HTMLElement, opts: { onReady?: () => void; onStat
   controls.target.set(0, 0.7, 0)
   if (matchMedia('(pointer:coarse)').matches) controls.enableRotate = false   // на телефоне палец листает страницу
   const HOME_DIR = new THREE.Vector3(6.8, 6.6, 11.6).normalize()
+  // на телефоне смотрим на линию по диагонали сверху: она уходит вглубь и не сплющивается в полоску
+  const NARROW_DIR = new THREE.Vector3(10, 10.5, 5.6).normalize()
   const HOME = HOME_DIR.clone().multiplyScalar(17.5)
   camera.position.copy(HOME)
   let focusId: StationId | null = null
@@ -362,7 +365,7 @@ export function initLine(root: HTMLElement, opts: { onReady?: () => void; onStat
   }
   controls.addEventListener('start', () => { flying = 0; lastUser = clock.elapsedTime })
 
-  let wide = true
+  let wide = true, sized = false
   function resize() {
     const w = W(), h = H()
     if (!w || !h) return
@@ -373,8 +376,10 @@ export function initLine(root: HTMLElement, opts: { onReady?: () => void; onStat
     camera.setViewOffset(w, h, wide ? -w * 0.16 : 0, 0, w, h)
     camera.fov = 32
     // линия длиной ~13 должна поместиться по ширине кадра: на узком экране камера отходит дальше
-    HOME.copy(HOME_DIR).multiplyScalar(wide ? 20.5 : Math.min(44, 20 * Math.max(1, 1.45 / camera.aspect)))
-    if (!focusId) { camGoal.copy(HOME); flying = 1 }
+    if (wide) HOME.copy(HOME_DIR).multiplyScalar(20.5)
+    else HOME.copy(NARROW_DIR).multiplyScalar(Math.min(38, Math.max(16, 12.2 / (0.573 * camera.aspect))))
+    if (!sized) { camera.position.copy(HOME); sized = true }   // первый кадр сразу с нужного ракурса
+    else if (!focusId) { camGoal.copy(HOME); flying = 1 }
     camera.updateProjectionMatrix()
   }
 
@@ -499,7 +504,7 @@ export function initLine(root: HTMLElement, opts: { onReady?: () => void; onStat
   const io = new IntersectionObserver(([e]) => { visible = e.isIntersecting; if (visible) { clock.getDelta(); kick() } })
   io.observe(root)
   const ro = new ResizeObserver(resize)
-  ro.observe(root)
+  ro.observe(canvas)
   resize()
   kick()
 
